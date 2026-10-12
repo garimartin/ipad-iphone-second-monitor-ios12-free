@@ -19,16 +19,43 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode_15.4.app/Contents/Developer
           xcodebuild -version
 
-      - name: Compile iOS app
+           - name: Compile iOS app
         run: |
-          xcodebuild \
-            -project iOS/LegacyPadDisplay.xcodeproj \
-            -scheme LegacyPadDisplay \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath "$RUNNER_TEMP/LegacyPadBuild" \
-            CODE_SIGNING_ALLOWED=NO \
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path("iOS/LegacyPadDisplay.xcodeproj/project.pbxproj")
+          content = p.read_text()
+
+          if "objectVersion = 77;" not in content:
+              raise SystemExit("No se encontró objectVersion 77")
+
+          content = content.replace(
+              "objectVersion = 77;",
+              "objectVersion = 60;",
+              1
+          )
+          content = content.replace(
+              "preferredProjectObjectVersion = 77;",
+              "preferredProjectObjectVersion = 60;",
+              1
+          )
+
+          p.write_text(content)
+          print("Formato del proyecto adaptado para Xcode 15.4")
+          PY
+
+          grep -nE 'objectVersion|preferredProjectObjectVersion' \\
+            iOS/LegacyPadDisplay.xcodeproj/project.pbxproj
+
+          xcodebuild \\
+            -project iOS/LegacyPadDisplay.xcodeproj \\
+            -scheme LegacyPadDisplay \\
+            -configuration Release \\
+            -sdk iphoneos \\
+            -destination 'generic/platform=iOS' \\
+            -derivedDataPath "$RUNNER_TEMP/LegacyPadBuild" \\
+            CODE_SIGNING_ALLOWED=NO \\
             build
 
       - name: Package IPA

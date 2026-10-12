@@ -19,7 +19,7 @@ jobs:
           sudo xcode-select --switch /Applications/Xcode_15.4.app/Contents/Developer
           xcodebuild -version
 
-           - name: Compile iOS app
+        - name: Compile iOS app
         run: |
           python3 - <<'PY'
           from pathlib import Path

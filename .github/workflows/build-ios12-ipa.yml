@@ -1,0 +1,52 @@
+name: Build LegacyPadDisplay IPA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+      - name: Download source
+        uses: actions/checkout@v6
+
+      - name: Select Xcode 15.4
+        run: |
+          sudo xcode-select --switch /Applications/Xcode_15.4.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Compile iOS app
+        run: |
+          xcodebuild \
+            -project iOS/LegacyPadDisplay.xcodeproj \
+            -scheme LegacyPadDisplay \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath "$RUNNER_TEMP/LegacyPadBuild" \
+            CODE_SIGNING_ALLOWED=NO \
+            build
+
+      - name: Package IPA
+        run: |
+          APP="$RUNNER_TEMP/LegacyPadBuild/Build/Products/Release-iphoneos/LegacyPadDisplay.app"
+
+          test -d "$APP"
+
+          mkdir -p "$RUNNER_TEMP/LegacyPadIPAPackage/Payload"
+          cp -R "$APP" "$RUNNER_TEMP/LegacyPadIPAPackage/Payload/"
+
+          cd "$RUNNER_TEMP/LegacyPadIPAPackage"
+          /usr/bin/zip -qry "$RUNNER_TEMP/LegacyPadDisplay-unsigned.ipa" Payload
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          path: ${{ runner.temp }}/LegacyPadDisplay-unsigned.ipa
+          archive: false
+          if-no-files-found: error
+          retention-days: 7
